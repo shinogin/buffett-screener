@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F5C63" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14171A" media="(prefers-color-scheme: dark)">
+<meta name="description" content="東証全3,694銘柄をバークシャー型の投資基準で採点するスクリーナー">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="バフェット式">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  html{color-scheme:light dark}
+  :root{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>バフェット式スクリーナー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;700&family=Noto+Sans+JP:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#EDEEE9; --surface:#FAFAF7; --surface2:#F1F2EC; --surface3:#E4E6DF;
+    --ink:#16191A; --ink2:#4A5150; --ink3:#7C8481;
+    --line:#D6D8D0; --line2:#C2C6BC;
+    --accent:#1F5C63; --accent2:#2E7F86; --accent-soft:#DCE8E7;
+    --good:#2E6F4E; --good-soft:#DCEBE1;
+    --warn:#8C6210; --warn-soft:#F2E7CE;
+    --bad:#9E3C2A; --bad-soft:#F3DED8;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171A; --surface:#1B1F22; --surface2:#202528; --surface3:#2A3034;
+      --ink:#ECEEE9; --ink2:#B3BAB6; --ink3:#828A86;
+      --line:#2F3538; --line2:#3D4448;
+      --accent:#6FC3C6; --accent2:#8FD6D8; --accent-soft:#1D3538;
+      --good:#6CC493; --good-soft:#182E24;
+      --warn:#D9A441; --warn-soft:#332815;
+      --bad:#E2836B; --bad-soft:#341F1A;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14171A; --surface:#1B1F22; --surface2:#202528; --surface3:#2A3034;
+    --ink:#ECEEE9; --ink2:#B3BAB6; --ink3:#828A86;
+    --line:#2F3538; --line2:#3D4448;
+    --accent:#6FC3C6; --accent2:#8FD6D8; --accent-soft:#1D3538;
+    --good:#6CC493; --good-soft:#182E24;
+    --warn:#D9A441; --warn-soft:#332815;
+    --bad:#E2836B; --bad-soft:#341F1A;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",system-ui,sans-serif;
+    font-size:14px; line-height:1.75; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1280px; margin:0 auto; padding:0 16px; padding-block:0 56px}
+  .mono{font-family:"Roboto Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+
+  header.top{border-bottom:1px solid var(--line); background:var(--surface)}
+  .top-in{max-width:1280px; margin:0 auto; padding:0 16px; padding-block:26px 0}
+  .eyebrow{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:700; margin:0 0 6px}
+  h1{font-family:"Shippori Mincho B1",serif; font-weight:700; font-size:clamp(25px,5vw,36px); line-height:1.25; margin:0; text-wrap:balance}
+  .lede{color:var(--ink2); margin:9px 0 0; max-width:64ch; font-size:13px}
+  nav.tabs{display:flex; gap:2px; margin-top:20px; flex-wrap:wrap}
+  nav.tabs button{
+    appearance:none; border:1px solid transparent; border-bottom:none; background:transparent;
+    font:inherit; font-size:13px; font-weight:500; color:var(--ink3); cursor:pointer;
+    padding:9px 15px; border-radius:7px 7px 0 0; margin-bottom:-1px;
+  }
+  nav.tabs button:hover{color:var(--ink)}
+  nav.tabs button[aria-selected="true"]{background:var(--bg); border-color:var(--line); color:var(--ink); font-weight:700}
+  nav.tabs button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px}
+  h2.sec{font-family:"Shippori Mincho B1",serif; font-size:18px; margin:0 0 4px; font-weight:700}
+  .sec-note{color:var(--ink3); font-size:12.5px; margin:0 0 14px}
+  .label{font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink3); font-weight:700}
+  .btn{appearance:none; border:1px solid var(--line2); background:var(--surface2); color:var(--ink);
+    font:inherit; font-size:13px; font-weight:500; padding:7px 13px; border-radius:8px; cursor:pointer}
+  .btn:hover{background:var(--surface3)}
+  .btn.sm{padding:4px 10px; font-size:12px}
+  .btn.ghost{background:transparent}
+  .btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  input,select,textarea{font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface2);
+    border:1px solid var(--line2); border-radius:7px; padding:6px 9px; width:100%}
+  input[type=number],input[type=search]{font-family:"Roboto Mono",monospace; font-variant-numeric:tabular-nums}
+  textarea{font-family:"Roboto Mono",monospace; font-size:11.5px; line-height:1.55}
+
+  /* profiles */
+  .profrow{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:9px; margin-bottom:14px}
+  .prof{border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; background:var(--surface); position:relative}
+  .prof:hover{border-color:var(--line2)}
+  .prof[data-on="1"]{border-color:var(--accent); background:var(--accent-soft); box-shadow:inset 0 0 0 1px var(--accent)}
+  .prof strong{display:block; font-size:13.5px}
+  .prof span{display:block; color:var(--ink2); font-size:11.5px; line-height:1.55; margin-top:1px}
+  .prof input{position:absolute; opacity:0; width:0; pointer-events:none}
+
+  /* filters */
+  .filters{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:10px; align-items:end}
+  .fld label{display:block; font-size:11px; color:var(--ink3); margin-bottom:3px; font-weight:700; letter-spacing:.04em}
+  .chips{display:flex; gap:5px; flex-wrap:wrap}
+  .chip{border:1px solid var(--line2); background:var(--surface2); border-radius:999px; padding:4px 11px; font-size:12px; cursor:pointer; user-select:none}
+  .chip[data-on="1"]{background:var(--accent); border-color:var(--accent); color:var(--surface); font-weight:700}
+
+  .statbar{display:flex; gap:18px; flex-wrap:wrap; align-items:baseline; margin:16px 0 10px}
+  .statbar b{font-family:"Roboto Mono",monospace; font-size:21px; font-weight:500}
+  .statbar .u{font-size:12px; color:var(--ink3)}
+
+  .tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--surface)}
+  table{border-collapse:collapse; width:100%; min-width:940px; font-size:13px}
+  th,td{padding:8px 9px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
+  th{font-size:10.5px; letter-spacing:.05em; color:var(--ink3); font-weight:700; background:var(--surface2);
+     position:sticky; top:0; cursor:pointer; user-select:none; z-index:1}
+  th.nm,td.nm{text-align:left; white-space:normal; min-width:168px}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--surface2)}
+  tbody tr[data-sel="1"]{background:var(--accent-soft)}
+  td.num{font-family:"Roboto Mono",monospace; font-variant-numeric:tabular-nums}
+  td.dim{color:var(--ink3)}
+  .rank{color:var(--ink3); font-size:11px; font-family:"Roboto Mono",monospace; margin-right:7px}
+  .code{font-family:"Roboto Mono",monospace; color:var(--ink3); font-size:11.5px; margin-right:6px}
+  .sect{display:block; font-size:10.5px; color:var(--ink3); line-height:1.4}
+
+  .grade{display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:21px; border-radius:6px; font-weight:700; font-size:12px; padding:0 6px}
+  .g-S{background:var(--good); color:#fff}
+  .g-A{background:var(--good-soft); color:var(--good); box-shadow:inset 0 0 0 1px currentColor}
+  .g-B{background:var(--warn-soft); color:var(--warn); box-shadow:inset 0 0 0 1px currentColor}
+  .g-C{background:var(--bad-soft); color:var(--bad); box-shadow:inset 0 0 0 1px currentColor}
+  .bar{position:relative; height:7px; border-radius:4px; background:var(--surface3); overflow:hidden}
+  .bar>i{position:absolute; inset:0 auto 0 0; border-radius:4px; background:var(--accent)}
+  .bar.ok>i{background:var(--good)} .bar.near>i{background:var(--warn)} .bar.ng>i{background:var(--bad)}
+  .scorecell{display:flex; align-items:center; gap:8px; justify-content:flex-end}
+
+  .detail{margin-top:16px}
+  .crits{display:grid; grid-template-columns:repeat(auto-fill,minmax(228px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  .crit{background:var(--surface); padding:10px 12px}
+  .crit .cl{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+  .crit .cn{font-size:12px; color:var(--ink2)}
+  .crit .cv{font-family:"Roboto Mono",monospace; font-size:15px; font-weight:500}
+  .crit .cb{display:flex; align-items:center; gap:8px; margin-top:6px}
+  .crit .ct{font-size:10.5px; color:var(--ink3); white-space:nowrap}
+  .verdict{display:inline-flex; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:999px}
+  .v-ok{background:var(--good-soft); color:var(--good)}
+  .v-near{background:var(--warn-soft); color:var(--warn)}
+  .v-ng{background:var(--bad-soft); color:var(--bad)}
+  .v-na{background:var(--surface3); color:var(--ink3)}
+  .ret{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:14px; margin-top:12px}
+  .ret .big{font-family:"Roboto Mono",monospace; font-size:26px; font-weight:500; line-height:1.2}
+  .ret .cap{font-size:11px; color:var(--ink3); margin-top:2px; line-height:1.5}
+  .grp{margin-top:14px}
+  .grp>.label{display:block; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--line)}
+
+  .th-row{display:grid; grid-template-columns:1fr 84px 42px; gap:6px; align-items:center; padding:4px 0; border-bottom:1px dotted var(--line)}
+  .th-row:last-child{border-bottom:none}
+  .th-row .n{font-size:12px; color:var(--ink2); line-height:1.35}
+  .th-row .n em{display:block; font-style:normal; font-size:10.5px; color:var(--ink3)}
+  .th-row input{padding:3px 6px; font-size:12px; text-align:right}
+  .th-row .w{font-size:11px; color:var(--ink3); text-align:right}
+
+  .banner{background:var(--accent-soft); color:var(--accent); border-radius:9px; padding:9px 13px; font-size:12px; font-weight:500; line-height:1.65; margin-bottom:14px}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px}
+
+  .prose{max-width:74ch}
+  .prose h3{font-family:"Shippori Mincho B1",serif; font-size:17px; margin:26px 0 6px; font-weight:700}
+  .prose h3:first-child{margin-top:4px}
+  .prose p{margin:0 0 12px; color:var(--ink2)}
+  .prose strong{color:var(--ink); font-weight:700}
+  .cases{display:grid; grid-template-columns:repeat(auto-fill,minmax(248px,1fr)); gap:12px; margin:14px 0 4px}
+  .case{background:var(--surface); border:1px solid var(--line); border-radius:11px; padding:14px 15px}
+  .case .yr{font-family:"Roboto Mono",monospace; font-size:11px; color:var(--accent); font-weight:500}
+  .case h4{margin:2px 0 6px; font-size:14.5px; font-family:"Shippori Mincho B1",serif}
+  .case p{margin:0; font-size:12.5px; color:var(--ink2); line-height:1.7}
+  .case .tag{display:inline-block; margin-top:9px; font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:2px 8px; border-radius:999px}
+  .lessons{border-left:3px solid var(--accent); padding:2px 0 2px 15px; margin:16px 0}
+  .lessons li{margin-bottom:7px; color:var(--ink2)}
+  ol.steps{padding-left:20px} ol.steps li{margin-bottom:9px; color:var(--ink2)}
+  .fn{font-size:11.5px; color:var(--ink3); border-top:1px solid var(--line); padding-top:12px; margin-top:26px; line-height:1.7}
+  .fn a{color:var(--accent)}
+  .prof .short{display:none}
+  details.fbox>summary{cursor:pointer; font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--ink3); list-style:none; padding:2px 0 10px}
+  details.fbox>summary::-webkit-details-marker{display:none}
+  details.fbox>summary::after{content:"　＋ 絞り込みを開く"}
+  details.fbox[open]>summary::after{content:"　− 絞り込みを閉じる"}
+  @media (min-width:681px){ details.fbox>summary{display:none} }
+  @media (max-width:680px){
+    .profrow{grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px}
+    .prof{padding:9px 6px; text-align:center}
+    .prof span.desc{display:none}
+    .prof .short{display:block; font-size:12px; font-weight:700}
+    .prof .full{display:none}
+    .filters{grid-template-columns:1fr 1fr}
+    .scorecell .bar{display:none}
+    .rank{margin-right:4px}
+    table{min-width:0}
+    th,td{padding:7px 6px}
+    th.nm,td.nm{min-width:120px}
+    .c-pass,.c-ey,.c-roa,.c-opm,.c-eq,.c-upR,.c-vol,.c-mcap{display:none}
+    .statbar{gap:12px} .statbar b{font-size:18px}
+    .ret .big{font-size:22px}
+    h1{font-size:24px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <p class="eyebrow" id="eyebrow">Berkshire-style Screener ・ Tokyo Stock Exchange</p>
+    <h1>バフェット式スクリーナー</h1>
+    <p class="lede">東証プライム・スタンダード・グロースの全<span id="ledeN">—</span>銘柄を、バークシャーの投資基準を写した条件で採点します。データは<span id="ledeD">—</span>取得。</p>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="t-screen" aria-controls="p-screen" aria-selected="true">スクリーナー</button>
+      <button role="tab" id="t-logic" aria-controls="p-logic" aria-selected="false">採点ロジック</button>
+      <button role="tab" id="t-cases" aria-controls="p-cases" aria-selected="false">バークシャーの実績</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<section id="p-screen" role="tabpanel" aria-labelledby="t-screen" style="padding-top:18px">
+
+  <div class="profrow" id="profRow"></div>
+
+  <div class="panel">
+    <details class="fbox" id="fbox"><summary></summary>
+    <div class="filters">
+      <div class="fld"><label for="f_q">銘柄名・コード</label><input id="f_q" type="search" placeholder="例）商事 / 8058"></div>
+      <div class="fld"><label for="f_sector">業種（33分類）</label><select id="f_sector"></select></div>
+      <div class="fld"><label for="f_min">時価総額 下限（億円）</label><input id="f_min" type="number" step="50" value="0"></div>
+      <div class="fld"><label for="f_max">時価総額 上限（億円）</label><input id="f_max" type="number" step="50" placeholder="上限なし"></div>
+      <div class="fld"><label for="f_score">最低スコア</label><input id="f_score" type="number" step="5" value="0"></div>
+      <div class="fld"><label for="f_ret">最低期待リターン（％）</label><input id="f_ret" type="number" step="1" placeholder="指定なし"></div>
+      <div class="fld"><label>市場</label><div class="chips" id="mktChips">
+        <span class="chip" data-m="0" data-on="1">プライム</span>
+        <span class="chip" data-m="1" data-on="1">スタンダード</span>
+        <span class="chip" data-m="2" data-on="1">グロース</span>
+      </div></div>
+    </div>
+    </details>
+    <div class="toolbar">
+      <button class="btn sm ghost" id="thToggle">条件と閾値を編集</button>
+      <button class="btn sm ghost" id="csvToggle">上位200件を書き出す</button>
+      <button class="btn sm ghost" id="resetAll">条件をリセット</button>
+    </div>
+    <div id="thPanel" hidden class="grp"><span class="label">条件・閾値・配点</span><div id="thList"></div></div>
+    <div id="csvPanel" hidden class="grp"><span class="label">CSV（全選択してコピー）</span><textarea id="csvArea" rows="8" spellcheck="false"></textarea></div>
+  </div>
+
+  <div class="statbar">
+    <span><b id="statHit">0</b> <span class="u">件ヒット</span></span>
+    <span><b id="statS">0</b> <span class="u">件がS判定（80点以上）</span></span>
+    <span><b id="statMed">—</b> <span class="u">ヒット銘柄のスコア中央値</span></span>
+    <span class="u" id="statShow"></span>
+  </div>
+
+  <div class="tablewrap">
+    <table id="tbl"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table>
+  </div>
+  <div class="toolbar"><button class="btn" id="more" hidden>さらに100件表示</button></div>
+
+  <div class="detail panel" id="detail" hidden></div>
+</section>
+
+<section id="p-logic" role="tabpanel" aria-labelledby="t-logic" hidden style="padding-top:22px">
+  <div class="prose">
+    <h3>なぜこの条件なのか</h3>
+    <p>バークシャーの買い方を一文にすると「<strong>他人資本に頼らず高い利益率を長く維持できる事業を、割安なときにまとめて買い、売らない</strong>」です。バフェットの買収基準は①理解できる事業、②長期の良好な収益力、③低負債かつ高ROE、④経営陣がいること、⑤単純な事業、⑥価格が分かること。このうち定量化できる部分が、下の4カテゴリです。</p>
+
+    <h3>① 収益力 ── ROE・ROA・営業利益率</h3>
+    <p>バフェットは「<strong>ひとつしか見られないならROE</strong>」という立場で、借入で嵩上げしていないROE15％超を目安にしてきました。ROEは負債で簡単に水増しできるため、<strong>ROA（総資産利益率）</strong>と<strong>自己資本比率</strong>をセットで見ます。原典モデルはROIC12％以上を使いますが、全銘柄分のROICは公開データで揃わないため、ここではROAで代用しています。</p>
+
+    <h3>② 継続性 ── 増益率・フリーキャッシュフロー</h3>
+    <p>定量モデル（Validea のバフェット型など）は<strong>過去10年で8年以上の増益</strong>と<strong>FCFが毎年プラス</strong>を求めます。ここでは取得できる<strong>直近4期の純利益の前年比（最大3回）</strong>の増益比率と、<strong>直近12か月のFCFが黒字か</strong>で代用しています。</p>
+
+    <h3>③ 財務の頑健さ ── 有利子負債・自己資本比率</h3>
+    <p>有利子負債は<strong>年間純利益の5倍以内（理想は2倍以内）</strong>。バークシャーが2008年や2020年に買い手側でいられたのは、自社にも投資先にも借入依存がなかったからです。自己資本比率は ROA÷ROE から推計しています（＝自己資本÷総資産）。銀行・保険・リース業は負債が事業そのものなので、この2項目は業種を踏まえて読んでください。</p>
+
+    <h3>④ 買値の規律 ── PER・PBR・配当・期待リターン</h3>
+    <p>良い会社でも高く買えば失敗する、というのがIBMやコカ・コーラ高値期の教訓です。定量モデルは最後に「<strong>益利回り（1÷PER）が長期金利を上回るか</strong>」「<strong>期待年率リターンが12〜15％以上か</strong>」を見ます。本ツールの期待リターンは次の2通りを平均する Validea 型の計算です。</p>
+    <ol class="steps">
+      <li><strong>ROEベース：</strong>内部留保（1−配当性向）×ROE の速度でBPSが複利成長 → 10年後BPS×ROE＝10年後EPS → ×想定PER＝10年後株価。</li>
+      <li><strong>EPS成長ベース：</strong>現在EPS×(1＋想定成長率)<sup>10</sup>×想定PER。想定成長率が空欄のときはROEベースのみで算出します。</li>
+      <li>年率リターンに配当利回りを足して平均。<strong>15％以上なら魅力的、12％未満は見送り</strong>が目安。想定PERは現在のPERを据え置いています。</li>
+      <li>一覧の「期待リターン」列と「益利回り」列は<strong>クリックで並び替え</strong>でき、左の絞り込みで下限も指定できます。ただしこの計算は<strong>現在のROEと配当性向が10年続く前提</strong>なので、高ROE・低配当性向の銘柄ほど過大に出ます。スコアと併せて読んでください。</li>
+    </ol>
+
+    <h3>採点の仕組み</h3>
+    <p>各条件は<strong>合格＝満点／惜しい＝半分／不可＝0点</strong>の3段階で、「惜しい」は閾値の±15％以内。データが無い項目は分母から外れるので、開示の薄い小型株でも相対比較ができます。総合スコアは80以上＝S、65以上＝A、50以上＝B、それ未満＝C。閾値と配点は画面上で書き換えられます。</p>
+    <p>プロファイルは3つ。<strong>原典型</strong>は質重視のバフェットモデル。<strong>日本株・大型</strong>は野村證券が2026年4月にバフェット保有銘柄の特性から逆算した条件（時価総額9兆円以上／PBR2.2倍以下／予想PER16.2倍以下／配当利回り2.75％以上／ROE13.5％以上／ボラティリティ28.5％以下）。<strong>中小型クオリティ</strong>は同じ思想を小型株向けに厳しくしたものです。</p>
+
+    <h3>データについて</h3>
+    <p>銘柄一覧は<strong>日本取引所グループの上場銘柄一覧</strong>（内国株のみ、2026年8月末基準）、財務数値は<strong>Yahoo Finance</strong>から取得したTTM（直近12か月）ベースです（取得日はページ上部に表示）。ボラティリティは日次リターン1年分の年率換算。カバー率はPER88％・PBR99％・ROE99％・自己資本比率78％・FCF36％で、<strong>自社株買いの有無は全銘柄分を取得できなかったため条件から外しています</strong>。実際に発注する前に、必ず決算短信・有価証券報告書の一次情報で確認してください。本ツールは投資助言ではありません。</p>
+  </div>
+</section>
+
+<section id="p-cases" role="tabpanel" aria-labelledby="t-cases" hidden style="padding-top:22px">
+  <div class="prose">
+    <h3>利益を出した主な投資と、そこで効いた因子</h3>
+    <p>金額は公表ベースの概数です。共通するのは「<strong>構造的に高収益な事業</strong>を、<strong>一時的な悪材料か無関心で安くなった瞬間</strong>に、<strong>借金せずに大きく</strong>買っている」という形です。</p>
+  </div>
+  <div class="cases">
+    <div class="case"><span class="yr">1964</span><h4>アメリカン・エキスプレス</h4>
+      <p>サラダ油スキャンダルで株価が半値に。カード・旅行小切手のブランドと顧客基盤は無傷と判断し、当時の運用資産の4割を投入。現在も中核保有。</p><span class="tag">一時的危機 × ブランド不変</span></div>
+    <div class="case"><span class="yr">1972</span><h4>シーズ・キャンディーズ</h4>
+      <p>2,500万ドルで買収。追加投資をほとんど必要とせず値上げだけで利益を伸ばし、累計20億ドル超の現金を他の投資に供給した。</p><span class="tag">高ROIC × 価格決定力</span></div>
+    <div class="case"><span class="yr">1976–96</span><h4>GEICO</h4>
+      <p>経営危機時に買い増し、最終的に完全子会社化。代理店を通さない直販という構造的な低コストが堀。保険のフロートが以後の投資原資になった。</p><span class="tag">コスト優位 × フロート</span></div>
+    <div class="case"><span class="yr">1988</span><h4>コカ・コーラ</h4>
+      <p>約13億ドルを投じ、以後一株も売らず。取得原価に対する配当だけで年利回りが数十％に。退屈だが永続する需要の代表例。</p><span class="tag">永続需要 × 無期限保有</span></div>
+    <div class="case"><span class="yr">2010</span><h4>BNSF鉄道</h4>
+      <p>全株取得。代替の効かないインフラ＝参入障壁そのもの。上場株ではなく事業まるごとを買う後年の主戦場を示した案件。</p><span class="tag">参入障壁 × 規制資産</span></div>
+    <div class="case"><span class="yr">2016–</span><h4>アップル</h4>
+      <p>取得原価約310億ドルが一時1,700億ドル超に。ハイテク株ではなく乗り換えコストの高い消費者ブランドとして買った点が本質。</p><span class="tag">スイッチングコスト</span></div>
+    <div class="case"><span class="yr">2020–</span><h4>日本の5大商社</h4>
+      <p>各社5％の取得から始め、2025年末で三菱商事10.8％・三井物産10.4％・伊藤忠10.1％・丸紅9.8％・住友9.7％、保有時価354億ドル。円建て社債で調達し為替リスクを中立化した点が巧い。2026年3月には東京海上HD 2.49％を追加取得。</p><span class="tag">低PBR × 高配当 × 資本規律</span></div>
+    <div class="case"><span class="yr">失敗例</span><h4>デクスター・シューズ / IBM / 航空株</h4>
+      <p>デクスターは自社株で支払い「堀があると誤認した」最大の失敗。IBMは事業の変化を読み違え、航空株は2020年に全売却。いずれも持続性の見誤り。</p><span class="tag">持続性の誤認</span></div>
+  </div>
+  <div class="prose">
+    <h3>共通する8つの因子</h3>
+    <ul class="lessons">
+      <li><strong>価格決定力</strong>があるか（値上げしても客が逃げないか）＝インフレ耐性。</li>
+      <li><strong>少ない再投資で成長</strong>するか。設備投資が重い事業は複利が効かない。</li>
+      <li><strong>借入に頼らない高ROE</strong>。負債でのROE嵩上げは評価しない。</li>
+      <li><strong>10年単位で予測できる</strong>利益。技術変化の速い領域は原則避ける。</li>
+      <li><strong>経営陣の資本配分</strong>。増配・自社株買い・規律ある買収の実績。</li>
+      <li><strong>買値の規律</strong>。益利回り＞長期金利、期待年率12〜15％以上。</li>
+      <li><strong>悪材料で買う</strong>。危機・無関心・非人気が最大の味方。</li>
+      <li><strong>資金調達の工夫</strong>。商社投資の円建て社債のように、リスクを構造で消す。</li>
+    </ul>
+    <h3>日本株で使うときの勘所</h3>
+    <p>日本企業はROEが構造的に低く、原典型の「ROE15％以上」を全銘柄に当てるとS判定はごく少数になります。逆に言えば、<strong>そこに残る銘柄が本当に少ないという事実こそがスクリーニングの結果</strong>です。総合商社が原典型で伸びないのは、売上総額が巨大で営業利益率が数％になる会計構造のため。バフェットが商社に見たのは利益率ではなく、低PBR・高配当・自社株買い・分散された資産で、それは「日本株・大型」プロファイルが再現します。</p>
+    <p class="fn">出典：銘柄一覧＝<a href="https://www.jpx.co.jp/markets/statistics-equities/misc/01.html">日本取引所グループ 上場銘柄一覧</a>／財務数値＝Yahoo Finance（2026年9月23日取得・TTM）／条件設計＝<a href="https://www.nomura.co.jp/wealthstyle/article/0687/">野村證券 バフェット銘柄の特性を踏まえた日本株スクリーニング</a>、<a href="https://blog.validea.com/building-a-quantitative-strategy-based-on-warren-buffetts-approach/">Validea Buffett-based model</a>／保有比率＝<a href="https://www.jiji.com/jc/article?k=2026030100579&amp;g=int">時事通信（2026年3月）</a>。本ツールは投資助言ではありません。</p>
+  </div>
+</section>
+</main>
+
+<script src="jpdata.js"></script>
+<script>
+"use strict";
+const D = window.JPDATA || {rows:[], sectors:[], asof:""};
+const MKT = ["プライム","スタンダード","グロース"];
+/* row: 0code 1name 2mkt 3sec 4price 5mcap 6per 7pbr 8div 9roe 10roa 11opm 12eq 13debt
+        14upR 15upD 16fcfPos 17fcfY 18payout 19vol 20eps 21bps 22ret1y 23revG 24epsG */
+const K = {code:0,name:1,mkt:2,sec:3,price:4,mcap:5,per:6,pbr:7,div:8,roe:9,roa:10,opm:11,
+           eq:12,debt:13,upR:14,upD:15,fcf:16,fcfY:17,payout:18,vol:19,eps:20,bps:21,ret1y:22};
+
+const PROFILES = {
+  origin:{name:"原典型（質重視）", short:"原典型", desc:"ROE・継続性・低負債を重く見るバフェット本来のモデル。",
+    crit:[
+      {f:"roe", n:"ROE",          sub:"自己資本利益率", dir:"gte", th:15,  w:18, u:"%"},
+      {f:"roa", n:"ROA",          sub:"総資産利益率",   dir:"gte", th:5,   w:12, u:"%"},
+      {f:"opm", n:"営業利益率",   sub:"",               dir:"gte", th:10,  w:8,  u:"%"},
+      {f:"upR", n:"増益比率",     sub:"直近4期の前年比", dir:"gte", th:67,  w:16, u:"%"},
+      {f:"fcf", n:"FCF",          sub:"直近12か月",     dir:"bool",th:1,   w:8,  u:""},
+      {f:"debt",n:"有利子負債",   sub:"純利益の何年分", dir:"lte", th:5,   w:12, u:"年"},
+      {f:"eq",  n:"自己資本比率", sub:"ROA÷ROEの推計",  dir:"gte", th:40,  w:10, u:"%"},
+      {f:"per", n:"PER",          sub:"買値の規律",     dir:"lte", th:20,  w:8,  u:"倍"},
+      {f:"pbr", n:"PBR",          sub:"",               dir:"lte", th:3,   w:8,  u:"倍"}
+    ]},
+  jp:{name:"日本株・大型（野村2026型）", short:"大型株", desc:"バークシャー保有銘柄の特性から逆算した大型株条件。",
+    crit:[
+      {f:"mcap",n:"時価総額",     sub:"9兆円＝90000億円", dir:"gte", th:90000, w:16, u:"億円"},
+      {f:"pbr", n:"PBR",          sub:"",               dir:"lte", th:2.2,  w:16, u:"倍"},
+      {f:"per", n:"PER",          sub:"",               dir:"lte", th:16.2, w:16, u:"倍"},
+      {f:"div", n:"配当利回り",   sub:"",               dir:"gte", th:2.75, w:16, u:"%"},
+      {f:"roe", n:"ROE",          sub:"",               dir:"gte", th:13.5, w:18, u:"%"},
+      {f:"vol", n:"ボラティリティ",sub:"過去1年・年率",  dir:"lte", th:28.5, w:18, u:"%"}
+    ]},
+  small:{name:"中小型クオリティ", short:"中小型", desc:"同じ思想を小型株向けに厳しくした条件。時価総額は絞り込みで指定。",
+    crit:[
+      {f:"roe", n:"ROE",          sub:"",               dir:"gte", th:15, w:20, u:"%"},
+      {f:"roa", n:"ROA",          sub:"",               dir:"gte", th:7,  w:12, u:"%"},
+      {f:"opm", n:"営業利益率",   sub:"",               dir:"gte", th:10, w:10, u:"%"},
+      {f:"upR", n:"増益比率",     sub:"直近4期の前年比", dir:"gte", th:67, w:16, u:"%"},
+      {f:"fcf", n:"FCF",          sub:"直近12か月",     dir:"bool",th:1,  w:8,  u:""},
+      {f:"debt",n:"有利子負債",   sub:"純利益の何年分", dir:"lte", th:2,  w:12, u:"年"},
+      {f:"eq",  n:"自己資本比率", sub:"",               dir:"gte", th:50, w:12, u:"%"},
+      {f:"per", n:"PER",          sub:"",               dir:"lte", th:15, w:10, u:"倍"}
+    ]}
+};
+const DEFAULTS = JSON.parse(JSON.stringify(PROFILES));
+let profiles = JSON.parse(JSON.stringify(PROFILES));
+
+const state = {profile:"origin", q:"", sector:"", min:0, max:null, minScore:0, minRet:null,
+  mkt:{0:true,1:true,2:true}, sort:{k:"score",dir:-1}, limit:100, sel:null};
+
+const $ = id=>document.getElementById(id);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v,d=1)=> (v===null||v===undefined) ? "—" : Number(v).toLocaleString("ja-JP",{minimumFractionDigits:d,maximumFractionDigits:d});
+const val = (r,f)=> f==="mcap" ? r[K.mcap] : (K[f]!==undefined ? r[K[f]] : null);
+
+function judge(c,v){
+  if(v===null||v===undefined) return {s:null,verdict:"na",ratio:0};
+  if(c.dir==="bool"){ const ok=v>=1; return {s:ok?1:0,verdict:ok?"ok":"ng",ratio:ok?1:0}; }
+  const th=Number(c.th);
+  if(c.dir==="gte"){
+    const r=th===0?1:v/th;
+    if(v>=th) return {s:1,verdict:"ok",ratio:Math.min(r,1.3)};
+    if(v>=th*0.85) return {s:.5,verdict:"near",ratio:Math.max(r,0)};
+    return {s:0,verdict:"ng",ratio:Math.max(r,0)};
+  }
+  if(v<=0) return {s:0,verdict:"ng",ratio:0};
+  const r=th/v;
+  if(v<=th) return {s:1,verdict:"ok",ratio:Math.min(r,1.3)};
+  if(v<=th*1.15) return {s:.5,verdict:"near",ratio:r};
+  return {s:0,verdict:"ng",ratio:r};
+}
+function scoreRow(r){
+  const P=profiles[state.profile]; let got=0,tot=0,pass=0;
+  const det=P.crit.map(c=>{
+    const v=val(r,c.f), j=judge(c,v);
+    if(j.s!==null){ got+=j.s*c.w; tot+=c.w; if(j.s===1) pass++; }
+    return {c,v,...j};
+  });
+  return {det, score: tot>0?Math.round(got/tot*100):null, pass, n:P.crit.length};
+}
+const grade = s=> s===null?"—": s>=80?"S": s>=65?"A": s>=50?"B":"C";
+
+function expReturn(r){
+  const price=r[K.price], eps=r[K.eps], bps=r[K.bps], roe=r[K.roe], payout=r[K.payout], per=r[K.per];
+  const dy=r[K.div]||0;
+  if(!price||!per||per<=0) return null;
+  let a=null;
+  if(bps&&roe!==null&&payout!==null&&roe>0){
+    const g=(roe/100)*(1-Math.min(Math.max(payout,0),100)/100);
+    const bps10=bps*Math.pow(1+g,10), eps10=bps10*(roe/100);
+    a=Math.pow((eps10*per)/price,1/10)-1+dy/100;
+  }
+  return {a, ey: 1/per};
+}
+
+/* ---------- render ---------- */
+function renderProfiles(){
+  $("profRow").innerHTML = Object.keys(profiles).map(k=>{
+    const p=profiles[k];
+    return `<label class="prof" data-on="${state.profile===k?1:0}"><input type="radio" name="pf" value="${k}" ${state.profile===k?"checked":""}>
+      <span class="short">${esc(p.short||p.name)}</span>
+      <strong class="full">${esc(p.name)}</strong><span class="desc">${esc(p.desc)}</span></label>`;
+  }).join("");
+  $("profRow").querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{
+    state.profile=el.value; state.limit=100; renderProfiles(); renderTh(); run();
+  }));
+}
+function renderTh(){
+  const P=profiles[state.profile];
+  $("thList").innerHTML=P.crit.map((c,i)=>`<div class="th-row">
+    <div class="n">${esc(c.n)}<em>${c.dir==="gte"?"以上":c.dir==="lte"?"以下":"黒字"}${c.sub?" ・"+esc(c.sub):""}</em></div>
+    <div>${c.dir==="bool"?'<div class="w">—</div>':`<input type="number" step="any" data-i="${i}" value="${c.th}">`}</div>
+    <div class="w">${c.w}pt</div></div>`).join("");
+  $("thList").querySelectorAll("input").forEach(el=>el.addEventListener("input",()=>{
+    const v=parseFloat(el.value); if(!isNaN(v)){ P.crit[+el.dataset.i].th=v; run(); }
+  }));
+}
+
+const COLS=[
+  {k:"score",t:"スコア"},{k:"pass",t:"充足"},{k:"expret",t:"期待リターン %"},{k:"ey",t:"益利回り %"},
+  {k:"roe",t:"ROE %"},{k:"roa",t:"ROA %"},{k:"opm",t:"営業利益率 %"},
+  {k:"eq",t:"自己資本 %"},{k:"debt",t:"負債 年"},{k:"upR",t:"増益 %"},{k:"per",t:"PER"},{k:"pbr",t:"PBR"},
+  {k:"div",t:"配当 %"},{k:"vol",t:"ボラ %"},{k:"mcap",t:"時価総額 億"}
+];
+let hits=[];
+
+function run(){
+  const q=state.q.trim().toLowerCase();
+  const out=[];
+  for(const r of D.rows){
+    if(!state.mkt[r[K.mkt]]) continue;
+    if(state.sector && D.sectors[r[K.sec]]!==state.sector) continue;
+    const mc=r[K.mcap];
+    if(state.min && !(mc>=state.min)) continue;
+    if(state.max && !(mc<=state.max)) continue;
+    if(q && !(r[K.code].includes(q) || r[K.name].toLowerCase().includes(q))) continue;
+    const s=scoreRow(r);
+    if(s.score===null || s.score<state.minScore) continue;
+    const er=expReturn(r);
+    const expret = (er && er.a!==null && isFinite(er.a)) ? er.a*100 : null;
+    if(state.minRet && !(expret!==null && expret>=state.minRet)) continue;
+    out.push({r, s, expret, ey: er? er.ey*100 : null});
+  }
+  const sk=state.sort.k, dir=state.sort.dir;
+  out.sort((x,y)=>{
+    const gv=o=> sk==="score"?o.s.score : sk==="pass"?o.s.pass
+              : sk==="expret"?o.expret : sk==="ey"?o.ey : val(o.r,sk);
+    const a=gv(x), b=gv(y);
+    if(a===null&&b===null) return (y.r[K.mcap]||0)-(x.r[K.mcap]||0);
+    if(a===null) return 1; if(b===null) return -1;
+    return (a-b)*dir || (y.s.score-x.s.score) || (y.r[K.mcap]||0)-(x.r[K.mcap]||0);
+  });
+  hits=out;
+  const sc=out.map(o=>o.s.score).sort((a,b)=>a-b);
+  $("statHit").textContent=out.length.toLocaleString("ja-JP");
+  $("statS").textContent=out.filter(o=>o.s.score>=80).length.toLocaleString("ja-JP");
+  $("statMed").textContent= sc.length? sc[Math.floor(sc.length/2)] : "—";
+  $("statShow").textContent= out.length? `上位${Math.min(state.limit,out.length)}件を表示・${profiles[state.profile].name}` : "条件に合う銘柄がありません";
+  renderTable();
+}
+
+function renderTable(){
+  const sk=state.sort.k, dir=state.sort.dir;
+  $("thead").innerHTML=`<th class="nm">銘柄</th>`+COLS.map(c=>`<th class="c-${c.k}" data-k="${c.k}">${esc(c.t)}${sk===c.k?(dir<0?" ↓":" ↑"):""}</th>`).join("");
+  $("thead").querySelectorAll("th[data-k]").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.k;
+    state.sort = (state.sort.k===k)?{k,dir:-state.sort.dir}:{k,dir:-1};
+    run();
+  }));
+  const view=hits.slice(0,state.limit);
+  $("tbody").innerHTML = view.map((o,i)=>{
+    const r=o.r, g=grade(o.s.score);
+    return `<tr data-c="${r[K.code]}" data-sel="${state.sel===r[K.code]?1:0}">
+      <td class="nm"><span class="rank">${i+1}</span><span class="code">${r[K.code]}</span>${esc(r[K.name])}
+        <span class="sect">${MKT[r[K.mkt]]}・${esc(D.sectors[r[K.sec]])}</span></td>
+      <td><div class="scorecell"><span class="grade g-${g}">${g}</span>
+        <div class="bar" style="width:52px"><i style="width:${o.s.score}%"></i></div>
+        <span class="mono">${o.s.score}</span></div></td>
+      <td class="num dim c-pass">${o.s.pass}/${o.s.n}</td>
+      <td class="num c-expret" style="${o.expret===null?"":"color:"+(o.expret>=15?"var(--good)":o.expret>=12?"var(--warn)":"var(--ink2)")}">${fmt(o.expret,1)}</td>
+      <td class="num c-ey">${fmt(o.ey,1)}</td>
+      ${["roe","roa","opm","eq","debt","upR"].map(k=>`<td class="num c-${k}">${fmt(val(r,k),k==="upR"?0:1)}</td>`).join("")}
+      ${["per","pbr","div","vol"].map(k=>`<td class="num c-${k}">${fmt(val(r,k),2)}</td>`).join("")}
+      <td class="num dim c-mcap">${fmt(r[K.mcap],0)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="16" style="text-align:center;color:var(--ink3);padding:26px">条件に合う銘柄がありません。閾値か絞り込みを緩めてください。</td></tr>`;
+  $("tbody").querySelectorAll("tr[data-c]").forEach(tr=>tr.addEventListener("click",()=>{
+    state.sel=tr.dataset.c; renderTable(); renderDetail();
+    $("detail").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }));
+  $("more").hidden = hits.length<=state.limit;
+}
+
+function renderDetail(){
+  const d=$("detail");
+  const hit=hits.find(o=>o.r[K.code]===state.sel);
+  if(!hit){ d.hidden=true; return; }
+  d.hidden=false;
+  const r=hit.r, {det,score,pass,n}=scoreRow(r), g=grade(score), er=expReturn(r);
+  const crits=det.map(o=>{
+    const w=Math.max(3,Math.min(100,Math.round((o.ratio||0)*77)));
+    const lab={ok:"合格",near:"惜しい",ng:"不可",na:"データなし"}[o.verdict];
+    const tgt=o.c.dir==="bool"?"黒字":`${o.c.dir==="gte"?"≥":"≤"} ${o.c.th}${o.c.u}`;
+    const v=o.v===null||o.v===undefined?"—":(o.c.dir==="bool"?(o.v>=1?"黒字":"赤字"):fmt(o.v,o.c.f==="pbr"||o.c.f==="per"?2:1)+o.c.u);
+    return `<div class="crit"><div class="cl"><span class="cn">${esc(o.c.n)}<br><span style="font-size:10.5px;color:var(--ink3)">${esc(o.c.sub||"")}</span></span>
+      <span class="cv">${v}</span></div>
+      <div class="cb"><span class="verdict v-${o.verdict}">${lab}</span>
+      <div class="bar ${o.verdict==="na"?"":o.verdict}" style="flex:1"><i style="width:${o.verdict==="na"?0:w}%"></i></div>
+      <span class="ct">${tgt}</span></div></div>`;
+  }).join("");
+  const rr = er&&er.a!==null ? (er.a*100) : null;
+  d.innerHTML=`
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <h2 class="sec" style="margin:0"><span class="mono" style="font-size:14px;color:var(--ink3)">${r[K.code]}</span> ${esc(r[K.name])}</h2>
+      <span class="grade g-${g}">${g}</span>
+      <span class="mono" style="font-size:19px">${score}<span style="font-size:12px;color:var(--ink3)">/100</span></span>
+      <span class="label">条件充足 ${pass}/${n}</span>
+      <span class="label">${MKT[r[K.mkt]]}・${esc(D.sectors[r[K.sec]])}</span>
+    </div>
+    <p class="sec-note">株価 ${fmt(r[K.price],1)}円／時価総額 ${fmt(r[K.mcap],0)}億円／EPS ${fmt(r[K.eps],2)}／BPS ${fmt(r[K.bps],2)}／配当性向 ${fmt(r[K.payout],1)}%／1年騰落 ${fmt(r[K.ret1y],1)}%</p>
+    <div class="crits">${crits}</div>
+    <div class="grp"><span class="label">期待リターン試算（10年・想定PERは現在値を据え置き）</span>
+      <div class="ret">
+        <div><div class="big" style="color:${rr===null?"var(--ink3)":rr>=15?"var(--good)":rr>=12?"var(--warn)":"var(--bad)"}">${rr===null?"—":fmt(rr,1)+"%"}</div>
+          <div class="cap">期待年率リターン（ROE・内部留保ベース＋配当）<br>15%以上◎／12%未満は見送り</div></div>
+        <div><div class="big">${er?fmt(er.ey*100,1)+"%":"—"}</div><div class="cap">益利回り（1÷PER）<br>長期金利を上回るか</div></div>
+        <div><div class="big">${fmt(r[K.div],2)}%</div><div class="cap">配当利回り</div></div>
+        <div><div class="big">${fmt(r[K.fcfY],1)}%</div><div class="cap">FCF利回り（FCF÷時価総額）</div></div>
+      </div></div>`;
+}
+
+/* ---------- filters ---------- */
+$("f_sector").innerHTML=`<option value="">すべて</option>`+D.sectors.map(s=>`<option>${esc(s)}</option>`).join("");
+const deb=(fn,ms=180)=>{let t;return()=>{clearTimeout(t);t=setTimeout(fn,ms);};};
+$("f_q").addEventListener("input",deb(()=>{state.q=$("f_q").value; state.limit=100; run();}));
+$("f_sector").addEventListener("change",()=>{state.sector=$("f_sector").value; state.limit=100; run();});
+$("f_min").addEventListener("input",deb(()=>{state.min=parseFloat($("f_min").value)||0; state.limit=100; run();}));
+$("f_max").addEventListener("input",deb(()=>{state.max=parseFloat($("f_max").value)||null; state.limit=100; run();}));
+$("f_score").addEventListener("input",deb(()=>{state.minScore=parseFloat($("f_score").value)||0; state.limit=100; run();}));
+$("f_ret").addEventListener("input",deb(()=>{const v=parseFloat($("f_ret").value); state.minRet=isNaN(v)?null:v; state.limit=100; run();}));
+$("mktChips").querySelectorAll(".chip").forEach(ch=>ch.addEventListener("click",()=>{
+  const m=+ch.dataset.m; state.mkt[m]=!state.mkt[m];
+  ch.dataset.on=state.mkt[m]?"1":"0"; state.limit=100; run();
+}));
+$("more").addEventListener("click",()=>{state.limit+=100; renderTable();});
+$("thToggle").addEventListener("click",()=>{$("thPanel").hidden=!$("thPanel").hidden;});
+$("csvToggle").addEventListener("click",()=>{
+  const p=$("csvPanel"); p.hidden=!p.hidden;
+  if(!p.hidden){
+    const head=["順位","コード","銘柄名","市場","業種","スコア","充足","期待リターン","益利回り","ROE","ROA","営業利益率","自己資本比率","負債年数","増益比率","PER","PBR","配当利回り","ボラティリティ","時価総額億円"];
+    const lines=hits.slice(0,200).map((o,i)=>{
+      const r=o.r;
+      return [i+1,r[K.code],r[K.name],MKT[r[K.mkt]],D.sectors[r[K.sec]],o.s.score,`${o.s.pass}/${o.s.n}`,
+        o.expret===null?"":o.expret.toFixed(1), o.ey===null?"":o.ey.toFixed(1),
+        r[K.roe],r[K.roa],r[K.opm],r[K.eq],r[K.debt],r[K.upR],r[K.per],r[K.pbr],r[K.div],r[K.vol],r[K.mcap]]
+        .map(x=>x===null||x===undefined?"":x).join(",");
+    });
+    $("csvArea").value=head.join(",")+"\n"+lines.join("\n");
+  }
+});
+$("resetAll").addEventListener("click",()=>{
+  profiles=JSON.parse(JSON.stringify(DEFAULTS));
+  state.q=""; state.sector=""; state.min=0; state.max=null; state.minScore=0; state.minRet=null; state.limit=100;
+  state.mkt={0:true,1:true,2:true}; state.sort={k:"score",dir:-1}; state.sel=null;
+  $("f_q").value=""; $("f_sector").value=""; $("f_min").value=0; $("f_max").value=""; $("f_score").value=0; $("f_ret").value="";
+  $("mktChips").querySelectorAll(".chip").forEach(c=>c.dataset.on="1");
+  $("detail").hidden=true; renderTh(); run();
+});
+if(window.matchMedia("(min-width:681px)").matches) $("fbox").open=true;
+$("ledeN").textContent = D.rows.length.toLocaleString("ja-JP");
+$("ledeD").textContent = (D.asof||"").replace(/^(\d{4})-(\d{2})-(\d{2})$/,(m,y,mo,d)=>`${y}年${+mo}月${+d}日`);
+$("eyebrow").textContent = `Berkshire-style Screener ・ TSE ${D.rows.length.toLocaleString("en-US")} stocks`;
+const TABS=[["t-screen","p-screen"],["t-logic","p-logic"],["t-cases","p-cases"]];
+TABS.forEach(([tid,pid])=>$(tid).addEventListener("click",()=>{
+  TABS.forEach(([t,p])=>{ $(t).setAttribute("aria-selected",t===tid); $(p).hidden = p!==pid; });
+}));
+
+renderProfiles(); renderTh(); run();
+</script>
+
+<script>
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>
