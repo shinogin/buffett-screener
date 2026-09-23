@@ -1,4 +1,4 @@
-const CACHE = 'buffett-screener-v1';
+const CACHE = 'buffett-screener-202609231054'
 const ASSETS = ['./','./index.html','./jpdata.js','./manifest.json','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
