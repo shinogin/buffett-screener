@@ -1,0 +1,41 @@
+name: 株価データの更新
+
+on:
+  schedule:
+    - cron: "0 21 * * 6"   # 毎週日曜 6:00 JST（UTC 土曜21:00）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 依存パッケージ
+        run: pip install openpyxl pillow
+
+      - name: 株価データを取得
+        run: python3 scripts/fetch_data.py
+
+      - name: アイコンを生成（無ければ作られる）
+        run: python3 scripts/make_icons.py
+
+      - name: サービスワーカーのキャッシュ名を更新
+        run: |
+          STAMP=$(date -u +%Y%m%d%H%M)
+          sed -i "s/const CACHE = .[^.]*./const CACHE = 'buffett-screener-$STAMP'/" sw.js
+
+      - name: コミット
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add jpdata.js sw.js icon-192.png icon-512.png icon-180.png icon-512-maskable.png
+          git diff --staged --quiet || git commit -m "データ更新 $(date -u +%Y-%m-%d)"
+          git push
